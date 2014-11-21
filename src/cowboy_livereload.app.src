@@ -7,6 +7,5 @@
     kernel,
     stdlib
   ]},
-  {mod, {cowboy_livereload_app, []}},
   {env, []}
 ]}.
