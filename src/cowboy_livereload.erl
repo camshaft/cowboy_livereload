@@ -3,6 +3,7 @@
 -export([start_link/0]).
 -export([reload/0]).
 -export([reload/1]).
+-export([alert/1]).
 
 %% cowboy_handler
 -export([init/3]).
@@ -30,6 +31,9 @@ reload() ->
 reload(File) ->
   gen_event:notify(?MODULE, {reload, File}).
 
+alert(Message) ->
+  gen_event:notify(?MODULE, {alert, Message}).
+
 init(_TransportName, Req, Opts) ->
   case cowboy_req:header(<<"upgrade">>, Req) of
     {<<"websocket">>, _} ->
@@ -54,6 +58,11 @@ init(_TransportName, Req, Opts) ->
   liveCSS => true
 })).
 
+-define(ALERT(Message), jsxn:encode(#{
+  command => alert,
+  message => Message
+})).
+
 websocket_init(_TransportName, Req, Opts) ->
   {ok, Req, Opts}.
 
@@ -61,12 +70,15 @@ websocket_handle({text, <<"{", _/binary>> = Msg}, Req, Opts) ->
   websocket_handle(jsxn:decode(Msg), Req, Opts);
 websocket_handle(#{<<"command">> := <<"hello">>}, Req, Opts) ->
   ok = gen_event:add_handler(?MODULE, {?MODULE, self()}, [self()]),
+  io:format("LiveReload client connected~n"),
   {reply, {text, ?HELLO_RESPONSE}, Req, Opts};
 websocket_handle(_Data, Req, Opts) ->
   {ok, Req, Opts}.
 
 websocket_info({reload, File}, Req, Opts) ->
   {reply, {text, ?RELOAD(File)}, Req, Opts};
+websocket_info({alert, Message}, Req, Opts) ->
+  {reply, {text, ?ALERT(Message)}, Req, Opts};
 websocket_info(_Info, Req, Opts) ->
   {ok, Req, Opts}.
 
@@ -88,8 +100,8 @@ terminate(_Reason, _Req, _Opts) ->
 init([Pid]) ->
   {ok, Pid}.
 
-handle_event({reload, File}, Pid) ->
-  Pid ! {reload, File},
+handle_event(Event, Pid) ->
+  Pid ! Event,
   {ok, Pid}.
 
 handle_call(_, Pid) ->
