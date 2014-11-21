@@ -1,0 +1,12 @@
+{application, cowboy_livereload, [
+  {description, "livereload implementation for cowboy"},
+  {vsn, "0.1.0"},
+  {modules, []},
+  {registered, []},
+  {applications, [
+    kernel,
+    stdlib
+  ]},
+  {mod, {cowboy_livereload_app, []}},
+  {env, []}
+]}.
